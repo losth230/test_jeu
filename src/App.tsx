@@ -7,6 +7,8 @@ import CourtPanel from "./ui/CourtPanel";
 import type { Court, CourtAction } from "./engine/court";
 import type { DiplomacyState } from "./engine/diplomacy";
 import DiplomacyPanel from "./ui/DiplomacyPanel";
+import DecisionModal from "./ui/DecisionModal";
+import { applyDecision, rollDecision, type Decision } from "./engine/events";
 import MapView from "./map/MapView";
 import type { MapProvinceData } from "./map/mapData";
 import { realmName } from "./map/mapData";
@@ -20,7 +22,10 @@ const SEVERITY_COLOR: Record<string, string> = {
 export default function App() {
   const [state, setState] = useState<GameState>(() => newGame());
   const [selected, setSelected] = useState<MapProvinceData | null>(null);
-  useGameClock(state, setState);
+  const [pendingDecision, setPendingDecision] = useState<Decision | null>(null);
+  const [prevSpeed, setPrevSpeed] = useState<GameState["speed"]>(1);
+  const clockState = pendingDecision ? { ...state, speed: 0 as const } : state;
+  useGameClock(clockState, setState, () => maybeTriggerDecision());
 
   const pushEvent = (prev: GameState, message: string, severity: "info" | "warning" | "crisis" = "info"): Pick<GameState, "events" | "eventSeq"> => ({
     events: [
@@ -45,6 +50,27 @@ export default function App() {
 
   const handlePeace = (diplomacy: DiplomacyState, accepted: boolean, message: string) => {
     setState((prev) => ({ ...prev, diplomacy, ...pushEvent(prev, message, accepted ? "info" : "warning") }));
+  };
+
+  const maybeTriggerDecision = () => {
+    if (pendingDecision) return;
+    if (Math.random() < 0.002) {
+      const decision = rollDecision();
+      if (decision) {
+        setPrevSpeed(state.speed);
+        setPendingDecision(decision);
+      }
+    }
+  };
+
+  const handleDecisionChoice = (optionIndex: number) => {
+    if (!pendingDecision) return;
+    const decision = pendingDecision;
+    setPendingDecision(null);
+    setState((prev) => {
+      const { state: next } = applyDecision(prev, decision, optionIndex);
+      return { ...next, speed: prevSpeed };
+    });
   };
 
   const ruler = state.characters[state.realm.rulerId];
@@ -73,7 +99,14 @@ export default function App() {
           {speedButton("×1", 1)}
           {speedButton("×2", 2)}
           {speedButton("×5", 3)}
-          <button onClick={() => setState((prev) => advanceDay(prev))}>+1 j</button>
+          <button
+            onClick={() => {
+              setState((prev) => advanceDay(prev));
+              maybeTriggerDecision();
+            }}
+          >
+            +1 j
+          </button>
         </div>
       </header>
 
@@ -128,6 +161,9 @@ export default function App() {
           </div>
         </aside>
       </section>
+      {pendingDecision && (
+        <DecisionModal decision={pendingDecision} onChoose={handleDecisionChoice} />
+      )}
     </div>
   );
 }
