@@ -51,6 +51,7 @@ export interface GameEvent {
 export type GameSpeed = 0 | 1 | 2 | 3;
 
 import type { Court } from "./court";
+import type { DiplomacyState } from "./diplomacy";
 
 export interface GameState {
   year: number;
@@ -60,6 +61,7 @@ export interface GameState {
   realm: Realm;
   characters: Record<string, Character>;
   court: Court;
+  diplomacy: DiplomacyState;
   events: GameEvent[];
   eventSeq: number;
 }

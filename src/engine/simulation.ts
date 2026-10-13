@@ -1,4 +1,5 @@
 import { dailyCourtDrift } from "./court";
+import { dailyAIRaid } from "./diplomacy";
 import {
   MONTH_LENGTHS,
   type GameSpeed,
@@ -40,8 +41,28 @@ export function advanceDay(state: GameState): GameState {
   }
   const court = dailyCourtDrift(state.court, rulerPrestige);
 
+  const raid = dailyAIRaid(state);
+  let realmAfterRaid = realm;
+  if (raid.damage > 0) {
+    realmAfterRaid = {
+      ...realmAfterRaid,
+      treasury: Math.max(0, realmAfterRaid.treasury - raid.damage * 2),
+    };
+  }
+
   const events = [...state.events];
   let eventSeq = state.eventSeq;
+  if (raid.message) {
+    eventSeq += 1;
+    events.unshift({
+      id: `evt-${eventSeq}`,
+      year,
+      month: normalizedMonth,
+      day: normalizedDay,
+      severity: "crisis",
+      text: raid.message,
+    });
+  }
   const rand = Math.random();
   const at = { year, month: normalizedMonth, day: normalizedDay };
   if (rand < 0.005) {
@@ -67,9 +88,10 @@ export function advanceDay(state: GameState): GameState {
     year,
     month: normalizedMonth,
     day: normalizedDay,
-    realm,
+    realm: realmAfterRaid,
     characters,
     court,
+    diplomacy: raid.diplomacy,
     events: events.slice(0, 50),
     eventSeq,
   };

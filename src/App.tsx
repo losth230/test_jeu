@@ -5,6 +5,8 @@ import { formatGameDate, type GameState, type GameSpeed } from "./engine/types";
 import { useGameClock } from "./ui/useGameClock";
 import CourtPanel from "./ui/CourtPanel";
 import type { Court, CourtAction } from "./engine/court";
+import type { DiplomacyState } from "./engine/diplomacy";
+import DiplomacyPanel from "./ui/DiplomacyPanel";
 import MapView from "./map/MapView";
 import type { MapProvinceData } from "./map/mapData";
 import { realmName } from "./map/mapData";
@@ -20,17 +22,29 @@ export default function App() {
   const [selected, setSelected] = useState<MapProvinceData | null>(null);
   useGameClock(state, setState);
 
+  const pushEvent = (prev: GameState, message: string, severity: "info" | "warning" | "crisis" = "info"): Pick<GameState, "events" | "eventSeq"> => ({
+    events: [
+      { id: `evt-${prev.eventSeq + 1}`, year: prev.year, month: prev.month, day: prev.day, severity, text: message },
+      ...prev.events,
+    ].slice(0, 50),
+    eventSeq: prev.eventSeq + 1,
+  });
+
   const handleCourtAction = (_id: string, _action: CourtAction, cost: number, message: string, court: Court) => {
     setState((prev) => ({
       ...prev,
       realm: { ...prev.realm, treasury: Math.max(0, prev.realm.treasury - cost) },
       court,
-      events: [
-        { id: `evt-${prev.eventSeq + 1}`, year: prev.year, month: prev.month, day: prev.day, severity: "info" as const, text: message },
-        ...prev.events,
-      ].slice(0, 50),
-      eventSeq: prev.eventSeq + 1,
+      ...pushEvent(prev, message),
     }));
+  };
+
+  const handleWar = (diplomacy: DiplomacyState, message: string) => {
+    setState((prev) => ({ ...prev, diplomacy, ...pushEvent(prev, message, "crisis") }));
+  };
+
+  const handlePeace = (diplomacy: DiplomacyState, accepted: boolean, message: string) => {
+    setState((prev) => ({ ...prev, diplomacy, ...pushEvent(prev, message, accepted ? "info" : "warning") }));
   };
 
   const ruler = state.characters[state.realm.rulerId];
@@ -98,6 +112,7 @@ export default function App() {
             </div>
           )}
           <CourtPanel state={state} onAct={handleCourtAction} />
+          <DiplomacyPanel state={state} onWar={handleWar} onPeace={handlePeace} />
           <div style={{ border: "1px solid #b3a184", padding: "0.75rem", backgroundColor: "#e7dcc6", flex: 1 }}>
             <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>Chronique</h2>
             <ul style={{ listStyle: "none", margin: 0, padding: 0, maxHeight: "16rem", overflowY: "auto" }}>

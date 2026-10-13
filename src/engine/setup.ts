@@ -1,5 +1,6 @@
 import type { GameState } from "./types";
 import { initCourt } from "./court";
+import { initDiplomacy } from "./diplomacy";
 
 const CHARACTERS: GameState["characters"] = {
   charles: {
@@ -74,6 +75,7 @@ export function newGame(): GameState {
     },
     characters: { ...CHARACTERS },
     court: initCourt(CHARACTERS, "charles"),
+    diplomacy: initDiplomacy("west-francia"),
     events: [],
     eventSeq: 0,
   };
