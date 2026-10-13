@@ -1,56 +1,60 @@
-import type { GameState } from "./types";
+import {
+  MONTH_LENGTHS,
+  type GameSpeed,
+  type GameState,
+} from "./types";
 
-export const MONTHS = [
-  "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
-  "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre",
-] as const;
-
-export function monthlyIncome(state: GameState): number {
+export function dailyIncome(state: GameState): number {
   const { realm } = state;
-  const tax = realm.provinces.reduce((sum, p) => sum + p.baseTax, 0);
+  const monthlyTax = realm.provinces.reduce((sum, p) => sum + p.baseTax, 0);
   const unrestPenalty = realm.provinces.reduce(
     (sum, p) => sum + (p.unrest * 0.01 * p.baseTax),
     0,
   );
   const stabilityFactor = 0.5 + realm.stability * 0.005;
-  return Math.max(0, Math.round((tax - unrestPenalty) * stabilityFactor));
+  const monthly = Math.max(0, (monthlyTax - unrestPenalty) * stabilityFactor);
+  return monthly / MONTH_LENGTHS[state.month - 1];
 }
 
-export function advanceMonth(state: GameState): GameState {
-  const month = state.month + 1;
+export function advanceDay(state: GameState): GameState {
+  const day = state.day + 1;
+  const overflowMonth = day > MONTH_LENGTHS[state.month - 1];
+  const month = overflowMonth ? state.month + 1 : state.month;
   const year = month > 12 ? state.year + 1 : state.year;
   const normalizedMonth = month > 12 ? 1 : month;
+  const normalizedDay = overflowMonth ? 1 : day;
 
   const realm = {
     ...state.realm,
-    treasury: state.realm.treasury + monthlyIncome(state),
+    treasury: state.realm.treasury + dailyIncome(state),
   };
 
   const characters = { ...state.characters };
   const ruler = characters[realm.rulerId];
   if (ruler) {
-    const prestigeGain = realm.stability >= 60 ? 1 : 0;
+    const prestigeGain = realm.stability >= 60 ? 0.05 : 0;
     characters[ruler.id] = { ...ruler, prestige: ruler.prestige + prestigeGain };
   }
 
   const events = [...state.events];
   let eventSeq = state.eventSeq;
   const rand = Math.random();
-  if (rand < 0.15) {
+  const at = { year, month: normalizedMonth, day: normalizedDay };
+  if (rand < 0.005) {
     eventSeq += 1;
     events.unshift({
       id: `evt-${eventSeq}`,
-      year,
-      month: normalizedMonth,
+      ...at,
+      severity: "warning",
       text: "Une mauvaise récolte inquiète les paysans de vos terres.",
     });
-  } else if (rand < 0.25) {
+  } else if (rand < 0.008) {
     eventSeq += 1;
     events.unshift({
       id: `evt-${eventSeq}`,
-      year,
-      month: normalizedMonth,
-      text: "Un rassemblement de Vikings est signalé sur les côtes.",
+      ...at,
+      severity: "crisis",
+      text: "Des navires nordiques sont signalés près de vos côtes.",
     });
   }
 
@@ -58,9 +62,21 @@ export function advanceMonth(state: GameState): GameState {
     ...state,
     year,
     month: normalizedMonth,
+    day: normalizedDay,
     realm,
     characters,
     events: events.slice(0, 50),
     eventSeq,
   };
 }
+
+export function setSpeed(state: GameState, speed: GameSpeed): GameState {
+  return { ...state, speed };
+}
+
+export const SPEED_MS_PER_DAY: Record<GameSpeed, number> = {
+  0: Infinity,
+  1: 2000,
+  2: 1000,
+  3: 400,
+};
