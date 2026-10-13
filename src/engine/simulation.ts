@@ -1,3 +1,4 @@
+import { dailyCourtDrift } from "./court";
 import {
   MONTH_LENGTHS,
   type GameSpeed,
@@ -31,10 +32,13 @@ export function advanceDay(state: GameState): GameState {
 
   const characters = { ...state.characters };
   const ruler = characters[realm.rulerId];
+  let rulerPrestige = 0;
   if (ruler) {
     const prestigeGain = realm.stability >= 60 ? 0.05 : 0;
-    characters[ruler.id] = { ...ruler, prestige: ruler.prestige + prestigeGain };
+    rulerPrestige = ruler.prestige + prestigeGain;
+    characters[ruler.id] = { ...ruler, prestige: rulerPrestige };
   }
+  const court = dailyCourtDrift(state.court, rulerPrestige);
 
   const events = [...state.events];
   let eventSeq = state.eventSeq;
@@ -65,6 +69,7 @@ export function advanceDay(state: GameState): GameState {
     day: normalizedDay,
     realm,
     characters,
+    court,
     events: events.slice(0, 50),
     eventSeq,
   };

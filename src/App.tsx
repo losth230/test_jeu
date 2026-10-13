@@ -3,6 +3,8 @@ import { newGame } from "./engine/setup";
 import { advanceDay, dailyIncome, setSpeed } from "./engine/simulation";
 import { formatGameDate, type GameState, type GameSpeed } from "./engine/types";
 import { useGameClock } from "./ui/useGameClock";
+import CourtPanel from "./ui/CourtPanel";
+import type { Court, CourtAction } from "./engine/court";
 import MapView from "./map/MapView";
 import type { MapProvinceData } from "./map/mapData";
 import { realmName } from "./map/mapData";
@@ -17,6 +19,19 @@ export default function App() {
   const [state, setState] = useState<GameState>(() => newGame());
   const [selected, setSelected] = useState<MapProvinceData | null>(null);
   useGameClock(state, setState);
+
+  const handleCourtAction = (_id: string, _action: CourtAction, cost: number, message: string, court: Court) => {
+    setState((prev) => ({
+      ...prev,
+      realm: { ...prev.realm, treasury: Math.max(0, prev.realm.treasury - cost) },
+      court,
+      events: [
+        { id: `evt-${prev.eventSeq + 1}`, year: prev.year, month: prev.month, day: prev.day, severity: "info" as const, text: message },
+        ...prev.events,
+      ].slice(0, 50),
+      eventSeq: prev.eventSeq + 1,
+    }));
+  };
 
   const ruler = state.characters[state.realm.rulerId];
   const income = dailyIncome(state);
@@ -82,6 +97,7 @@ export default function App() {
               </ul>
             </div>
           )}
+          <CourtPanel state={state} onAct={handleCourtAction} />
           <div style={{ border: "1px solid #b3a184", padding: "0.75rem", backgroundColor: "#e7dcc6", flex: 1 }}>
             <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>Chronique</h2>
             <ul style={{ listStyle: "none", margin: 0, padding: 0, maxHeight: "16rem", overflowY: "auto" }}>

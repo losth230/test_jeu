@@ -1,4 +1,52 @@
 import type { GameState } from "./types";
+import { initCourt } from "./court";
+
+const CHARACTERS: GameState["characters"] = {
+  charles: {
+    id: "charles",
+    name: "Charles le Chauve",
+    dynasty: "Karling",
+    bornYear: 823,
+    sex: "male",
+    alive: true,
+    gold: 50,
+    prestige: 100,
+    traits: ["ambitieux", "lettré"],
+  },
+  eudes: {
+    id: "eudes",
+    name: "Eudes de Paris",
+    dynasty: "Robertiens",
+    bornYear: 845,
+    sex: "male",
+    alive: true,
+    gold: 15,
+    prestige: 20,
+    traits: ["vaillant", "ambitieux"],
+  },
+  hugues: {
+    id: "hugues",
+    name: "Hugues l'Abbé",
+    dynasty: "Robertiens",
+    bornYear: 840,
+    sex: "male",
+    alive: true,
+    gold: 10,
+    prestige: 15,
+    traits: ["pieux", "prudent"],
+  },
+  gondrade: {
+    id: "gondrade",
+    name: "Gondrade",
+    dynasty: "Girardides",
+    bornYear: 850,
+    sex: "female",
+    alive: true,
+    gold: 8,
+    prestige: 10,
+    traits: ["lettrée", "douce"],
+  },
+};
 
 export function newGame(): GameState {
   return {
@@ -24,19 +72,8 @@ export function newGame(): GameState {
       stability: 55,
       legitimacy: 50,
     },
-    characters: {
-      charles: {
-        id: "charles",
-        name: "Charles le Chauve",
-        dynasty: "Karling",
-        bornYear: 823,
-        sex: "male",
-        alive: true,
-        gold: 50,
-        prestige: 100,
-        traits: ["ambitieux", "lettré"],
-      },
-    },
+    characters: { ...CHARACTERS },
+    court: initCourt(CHARACTERS, "charles"),
     events: [],
     eventSeq: 0,
   };
